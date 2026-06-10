@@ -77,6 +77,8 @@ data/bg/introsfx_mt32_flx.h
 data/bg/introsfx_sb.flx
 data/bg/introsfx_sb_flx.h
 data/bg/sfx/
+data/shortcutbar.vga
+data/shortcutbar_vga.h
 data/exult.flx
 data/exult_bg.flx
 data/exult_bg_flx.h

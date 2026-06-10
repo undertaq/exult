@@ -1,0 +1,17 @@
+{
+  "name": "fluidsynth",
+  "version": "2.5.1",
+  "description": "FluidSynth is a real-time software synthesizer based on the SoundFont 2 specifications",
+  "homepage": "https://www.fluidsynth.org/",
+  "license": "LGPL-2.1-only",
+  "dependencies": [
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    },
+    {
+      "name": "vcpkg-cmake-config",
+      "host": true
+    }
+  ]
+}
