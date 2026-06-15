@@ -538,6 +538,7 @@ for /f "tokens=* delims=" %%u in ('git ls-remote --get-url') do echo #define GIT
     <ClCompile Include="..\..\shapes\font_map.cc" />
     <ClCompile Include="..\..\shapes\fontgen.cc" />
     <ClCompile Include="..\..\shapes\fontvga.cc" />
+    <ClCompile Include="..\..\shapes\ttfont.cc" />
     <ClCompile Include="..\..\shapes\items.cc" />
     <ClCompile Include="..\..\shapes\miscinf.cc" />
     <ClCompile Include="..\..\shapes\pngio.cc" />
@@ -784,6 +785,7 @@ for /f "tokens=* delims=" %%u in ('git ls-remote --get-url') do echo #define GIT
     <ClInclude Include="..\..\shapes\font_map.h" />
     <ClInclude Include="..\..\shapes\fontgen.h" />
     <ClInclude Include="..\..\shapes\fontvga.h" />
+    <ClInclude Include="..\..\shapes\ttfont.h" />
     <ClInclude Include="..\..\shapes\items.h" />
     <ClInclude Include="..\..\shapes\miscinf.h" />
     <ClInclude Include="..\..\shapes\pngio.h" />
