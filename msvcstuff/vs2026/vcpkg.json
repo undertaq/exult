@@ -3,8 +3,12 @@
   "version-semver": "1.11.0-git",
   "$Comment": "Not specifying versions of the dependencies, just use latest of all of them",
   "dependencies": [
+    "freetype",
     "libpng",
-    "sdl3",
+    {
+      "name": "sdl3",
+      "features": ["vulkan"]
+    },
     "zlib",
     "libogg",
     "libvorbis",
@@ -12,5 +16,5 @@
     "fluidsynth",
     "dirent"
   ],
-  "builtin-baseline": "d592849579fb1fb22f87406b2184522ea21a8783"
+  "builtin-baseline": "10ceb139a610ebf3c6aa49cdc4a4b7f3db5d3f2b"
 }
