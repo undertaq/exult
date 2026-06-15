@@ -1,4 +1,4 @@
-/*
+﻿/*
  *  Copyright (C) 2000-2022  The Exult Team
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -22,6 +22,9 @@
 
 #include "font.h"
 
+#include "ttfont.h"
+#include "font_map.h"
+
 #include "U7file.h"
 #include "databuf.h"
 #include "exceptions.h"
@@ -35,6 +38,47 @@ using std::strncmp;
 using std::toupper;
 
 FontManager fontManager;
+
+/*
+ *  CJK / font-byte helpers used by CJKRoutingFont.
+ */
+
+// Returns true if the string contains any byte >= 0x80 (potential CJK font byte).
+static bool has_high_byte(const char* text, int textlen = -1) {
+	if (!text || textlen == 0) {
+		return false;
+	}
+	if (textlen < 0) {
+		for (const char* p = text; *p; ++p) {
+			if (static_cast<unsigned char>(*p) >= 0x80) {
+				return true;
+			}
+		}
+	} else {
+		for (int i = 0; i < textlen; ++i) {
+			if (static_cast<unsigned char>(text[i]) >= 0x80) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+// Reverse-translate font bytes back to UTF-8 using the font_map reverse lookup.
+// Each font byte (0x00-0xFF) is mapped to its UTF-8 character. Non-CJK bytes
+// that have no mapping are passed through unchanged.
+static std::string font_bytes_to_utf8(const char* text, int textlen = -1) {
+	std::string result;
+	int         len = (textlen < 0) ? static_cast<int>(std::strlen(text)) : textlen;
+	result.reserve(static_cast<size_t>(len) * 2);    // Rough upper bound.
+	char buf[FONT_MAP_MAX_UTF8_BYTES + 1];
+	for (int i = 0; i < len; ++i) {
+		const unsigned char c = static_cast<unsigned char>(text[i]);
+		const size_t        n = translate_font_hex_to_utf8(c, buf);
+		result.append(buf, n);
+	}
+	return result;
+}
 
 //	Want a more restrictive test for space.
 inline bool Is_space(char c) {
@@ -877,10 +921,455 @@ void FontManager::remove_font(const char* name) {
 	fonts.erase(name);
 }
 
+
+/*
+ *  Wrapper that routes text rendering to the TC (Traditional Chinese)
+ *  TTF font when the text contains CJK font bytes (>= 0x80) and the TC
+ *  font is loaded (registered as "ttf/tc" in FontManager).
+ *
+ *  Pure-ASCII strings bypass all routing and are delegated to the base
+ *  (bitmap) font with zero runtime overhead beyond a single map lookup
+ *  and a fast scan for high bytes.
+ *
+ *  When CJK bytes are detected, the wrapper reverse-translates the font
+ *  bytes back to UTF-8 via translate_font_hex_to_utf8() and passes the
+ *  reconstructed UTF-8 string to the TC font.  This ensures the TTF
+ *  rendering path (which expects UTF-8) receives valid input.
+ *
+ *  If the TC font is not loaded, or the text is pure-ASCII, the wrapper
+ *  is transparent — it delegates directly to the base font.
+ */
+class CJKRoutingFont : public Font {
+	std::shared_ptr<Font> base_font;
+	int                   base_ver_lead;
+
+public:
+	CJKRoutingFont(std::shared_ptr<Font> base)
+			: Font(), base_font(std::move(base)), base_ver_lead(base_font->get_ver_lead()) {
+	}
+
+	int get_ver_lead() const {
+		return base_ver_lead;
+	}
+
+	int paint_text(
+			Image_buffer8* win, const char* text, int xoff, int yoff,
+			unsigned char* trans) override {
+		auto tc = fontManager.get_font("ttf/tc");
+		if (tc && has_high_byte(text)) {
+			auto utf8 = font_bytes_to_utf8(text);
+			return tc->paint_text(win, utf8.c_str(), xoff, yoff, trans);
+		}
+		return base_font->paint_text(win, text, xoff, yoff, trans);
+	}
+
+	int paint_text(
+			Image_buffer8* win, const char* text, int textlen, int xoff, int yoff,
+			unsigned char* trans) override {
+		auto tc = fontManager.get_font("ttf/tc");
+		if (tc && has_high_byte(text, textlen)) {
+			auto utf8 = font_bytes_to_utf8(text, textlen);
+			return tc->paint_text(
+					win, utf8.c_str(), static_cast<int>(utf8.size()), xoff, yoff, trans);
+		}
+		return base_font->paint_text(win, text, textlen, xoff, yoff, trans);
+	}
+
+	int paint_text_box(
+			Image_buffer8* win, const char* text, int x, int y, int w, int h,
+			int vert_lead, bool pbreak, bool center, Cursor_info* cursor,
+			unsigned char* trans) override {
+		auto tc = fontManager.get_font("ttf/tc");
+		if (tc && has_high_byte(text)) {
+			auto utf8 = font_bytes_to_utf8(text);
+			return tc->paint_text_box(
+					win, utf8.c_str(), x, y, w, h, vert_lead, pbreak, center, cursor, trans);
+		}
+		return base_font->paint_text_box(
+				win, text, x, y, w, h, vert_lead, pbreak, center, cursor, trans);
+	}
+
+	int get_text_width(const char* text) override {
+		auto tc = fontManager.get_font("ttf/tc");
+		if (tc && has_high_byte(text)) {
+			auto utf8 = font_bytes_to_utf8(text);
+			return tc->get_text_width(utf8.c_str());
+		}
+		return base_font->get_text_width(text);
+	}
+
+	int get_text_width(const char* text, int textlen) override {
+		auto tc = fontManager.get_font("ttf/tc");
+		if (tc && has_high_byte(text, textlen)) {
+			auto utf8 = font_bytes_to_utf8(text, textlen);
+			return tc->get_text_width(utf8.c_str(), static_cast<int>(utf8.size()));
+		}
+		return base_font->get_text_width(text, textlen);
+	}
+
+	int get_text_height() override {
+		return base_font->get_text_height();
+	}
+
+	int get_text_baseline() override {
+		return base_font->get_text_baseline();
+	}
+
+	void get_text_box_dims(
+			const char* text, int& width, int& height, int vert_lead) override {
+		auto tc = fontManager.get_font("ttf/tc");
+		if (tc && has_high_byte(text)) {
+			auto utf8 = font_bytes_to_utf8(text);
+			tc->get_text_box_dims(utf8.c_str(), width, height, vert_lead);
+			return;
+		}
+		base_font->get_text_box_dims(text, width, height, vert_lead);
+	}
+
+	int find_cursor(
+			const char* text, int x, int y, int w, int h, int cx, int cy,
+			int vert_lead) override {
+		auto tc = fontManager.get_font("ttf/tc");
+		if (tc && has_high_byte(text)) {
+			auto utf8 = font_bytes_to_utf8(text);
+			return tc->find_cursor(utf8.c_str(), x, y, w, h, cx, cy, vert_lead);
+		}
+		return base_font->find_cursor(text, x, y, w, h, cx, cy, vert_lead);
+	}
+
+	int find_xcursor(const char* text, int textlen, int cx) override {
+		auto tc = fontManager.get_font("ttf/tc");
+		if (tc && has_high_byte(text, textlen)) {
+			auto utf8 = font_bytes_to_utf8(text, textlen);
+			return tc->find_xcursor(
+					utf8.c_str(), static_cast<int>(utf8.size()), cx);
+		}
+		return base_font->find_xcursor(text, textlen, cx);
+	}
+
+	int paint_text_fixedwidth(
+			Image_buffer8* win, const char* text, int xoff, int yoff,
+			int width, unsigned char* trans) override {
+		auto tc = fontManager.get_font("ttf/tc");
+		if (tc && has_high_byte(text)) {
+			auto utf8 = font_bytes_to_utf8(text);
+			return tc->paint_text_fixedwidth(win, utf8.c_str(), xoff, yoff, width, trans);
+		}
+		return base_font->paint_text_fixedwidth(win, text, xoff, yoff, width, trans);
+	}
+
+	int paint_text_fixedwidth(
+			Image_buffer8* win, const char* text, int textlen, int xoff, int yoff,
+			int width, unsigned char* trans) override {
+		auto tc = fontManager.get_font("ttf/tc");
+		if (tc && has_high_byte(text, textlen)) {
+			auto utf8 = font_bytes_to_utf8(text, textlen);
+			return tc->paint_text_fixedwidth(
+					win, utf8.c_str(), static_cast<int>(utf8.size()), xoff, yoff, width, trans);
+		}
+		return base_font->paint_text_fixedwidth(win, text, textlen, xoff, yoff, width, trans);
+	}
+
+	int paint_text_box_fixedwidth(
+			Image_buffer8* win, const char* text, int x, int y, int w, int h,
+			int char_width, int vert_lead, int pbreak,
+			unsigned char* trans) override {
+		auto tc = fontManager.get_font("ttf/tc");
+		if (tc && has_high_byte(text)) {
+			auto utf8 = font_bytes_to_utf8(text);
+			return tc->paint_text_box_fixedwidth(
+					win, utf8.c_str(), x, y, w, h, char_width, vert_lead, pbreak, trans);
+		}
+		return base_font->paint_text_box_fixedwidth(
+				win, text, x, y, w, h, char_width, vert_lead, pbreak, trans);
+	}
+};
+
+
+/**
+ *  Wraps a TTF font to render ALL text (not just CJK) via the TTF path,
+ *  converting font bytes back to UTF-8 before each call. Every character,
+ *  including ASCII, is routed through the TrueType renderer.
+ */
+class TtfFullFont : public Font {
+	std::shared_ptr<Font> ttfont;
+	int                   tt_ver_lead;
+
+public:
+	TtfFullFont(std::shared_ptr<Font> tc)
+			: Font(), ttfont(std::move(tc)), tt_ver_lead(ttfont->get_ver_lead()) {
+	}
+
+	int get_ver_lead() const {
+		return tt_ver_lead;
+	}
+
+	int paint_text(
+			Image_buffer8* win, const char* text, int xoff, int yoff,
+			unsigned char* trans) override {
+		auto utf8 = font_bytes_to_utf8(text);
+		return ttfont->paint_text(win, utf8.c_str(), xoff, yoff, trans);
+	}
+
+	int paint_text(
+			Image_buffer8* win, const char* text, int textlen, int xoff, int yoff,
+			unsigned char* trans) override {
+		auto utf8 = font_bytes_to_utf8(text, textlen);
+		return ttfont->paint_text(
+				win, utf8.c_str(), static_cast<int>(utf8.size()), xoff, yoff, trans);
+	}
+
+	int paint_text_box(
+			Image_buffer8* win, const char* text, int x, int y, int w, int h,
+			int vert_lead, bool pbreak, bool center, Cursor_info* cursor,
+			unsigned char* trans) override {
+		auto utf8 = font_bytes_to_utf8(text);
+		return ttfont->paint_text_box(
+				win, utf8.c_str(), x, y, w, h, vert_lead, pbreak, center, cursor, trans);
+	}
+
+	int get_text_width(const char* text) override {
+		auto utf8 = font_bytes_to_utf8(text);
+		return ttfont->get_text_width(utf8.c_str());
+	}
+
+	int get_text_width(const char* text, int textlen) override {
+		auto utf8 = font_bytes_to_utf8(text, textlen);
+		return ttfont->get_text_width(utf8.c_str(), static_cast<int>(utf8.size()));
+	}
+
+	int get_text_height() override {
+		return ttfont->get_text_height();
+	}
+
+	int get_text_baseline() override {
+		return ttfont->get_text_baseline();
+	}
+
+	void get_text_box_dims(
+			const char* text, int& width, int& height, int vert_lead) override {
+		auto utf8 = font_bytes_to_utf8(text);
+		ttfont->get_text_box_dims(utf8.c_str(), width, height, vert_lead);
+	}
+
+	int find_cursor(
+			const char* text, int x, int y, int w, int h, int cx, int cy,
+			int vert_lead) override {
+		auto utf8 = font_bytes_to_utf8(text);
+		return ttfont->find_cursor(utf8.c_str(), x, y, w, h, cx, cy, vert_lead);
+	}
+
+	int find_xcursor(const char* text, int textlen, int cx) override {
+		auto utf8 = font_bytes_to_utf8(text, textlen);
+		return ttfont->find_xcursor(
+				utf8.c_str(), static_cast<int>(utf8.size()), cx);
+	}
+
+	int paint_text_fixedwidth(
+			Image_buffer8* win, const char* text, int xoff, int yoff,
+			int width, unsigned char* trans) override {
+		auto utf8 = font_bytes_to_utf8(text);
+		return ttfont->paint_text_fixedwidth(win, utf8.c_str(), xoff, yoff, width, trans);
+	}
+
+	int paint_text_fixedwidth(
+			Image_buffer8* win, const char* text, int textlen, int xoff, int yoff,
+			int width, unsigned char* trans) override {
+		auto utf8 = font_bytes_to_utf8(text, textlen);
+		return ttfont->paint_text_fixedwidth(
+				win, utf8.c_str(), static_cast<int>(utf8.size()), xoff, yoff, width, trans);
+	}
+
+	int paint_text_box_fixedwidth(
+			Image_buffer8* win, const char* text, int x, int y, int w, int h,
+			int char_width, int vert_lead, int pbreak,
+			unsigned char* trans) override {
+		auto utf8 = font_bytes_to_utf8(text);
+		return ttfont->paint_text_box_fixedwidth(
+				win, utf8.c_str(), x, y, w, h, char_width, vert_lead, pbreak, trans);
+	}
+};
+
+
 std::shared_ptr<Font> FontManager::get_font(const char* name) {
-	return fonts[name];
+	auto it = fonts.find(name);
+	if (it == fonts.end() || !it->second) {
+		return nullptr;
+	}
+	// Do NOT wrap the TC font itself (would cause recursion).
+	if (std::strcmp(name, "ttf/tc") == 0) {
+		return it->second;
+	}
+	// If the TC font is loaded, wrap every named-font lookup with a
+	// CJKRoutingFont so that strings containing CJK font bytes (>= 0x80)
+	// are automatically routed through the TrueType rendering path.
+	// Pure-ASCII text passes through to the bitmap font untouched.
+	if (fonts.find("ttf/tc") != fonts.end()) {
+		return std::make_shared<CJKRoutingFont>(it->second);
+	}
+	return it->second;
 }
 
 void FontManager::reset() {
 	fonts.clear();
+}
+/*
+ *  Wrapper that adapts TtFont to the Font interface.
+ *  Used by FontManager to store TTF fonts alongside bitmap fonts.
+ */
+class TtFontWrapper : public Font {
+private:
+	TtFont ttfont;
+
+public:
+	TtFontWrapper() = default;
+
+	int load(const char* font_path, int pixel_size, int hlead = 0, int vlead = 1) {
+		return ttfont.load(font_path, pixel_size, hlead, vlead);
+	}
+
+	int paint_text(
+			Image_buffer8* win, const char* text, int xoff, int yoff,
+			unsigned char* trans) override {
+		return ttfont.paint_text(win, text, xoff, yoff, 255, -1, trans);
+	}
+
+	int paint_text(
+			Image_buffer8* win, const char* text, int textlen, int xoff, int yoff,
+			unsigned char* trans) override {
+		return ttfont.paint_text(win, text, textlen, xoff, yoff, 255, -1, trans);
+	}
+
+	int paint_text_box(
+			Image_buffer8* win, const char* text, int x, int y, int w, int h,
+			int vert_lead, bool pbreak, bool center,
+			Cursor_info* cursor, unsigned char* trans) override {
+		return ttfont.paint_text_box(
+				win, text, x, y, w, h, vert_lead, pbreak, center,
+				cursor, 255, -1, trans);
+	}
+
+	int get_text_width(const char* text) override {
+		return ttfont.get_text_width(text);
+	}
+
+	int get_text_width(const char* text, int textlen) override {
+		return ttfont.get_text_width(text, textlen);
+	}
+
+	int get_text_height() override {
+		return ttfont.get_text_height();
+	}
+
+	int get_text_baseline() override {
+		return ttfont.get_text_baseline();
+	}
+
+	void get_text_box_dims(const char* text, int& width, int& height, int vert_lead) override {
+		ttfont.get_text_box_dims(text, width, height, vert_lead);
+	}
+
+	int find_cursor(
+			const char* text, int x, int y, int w, int h,
+			int cx, int cy, int vert_lead) override {
+		return ttfont.find_cursor(text, x, y, w, h, cx, cy, vert_lead);
+	}
+
+	int find_xcursor(const char* text, int textlen, int cx) override {
+		return ttfont.find_xcursor(text, textlen, cx);
+	}
+
+	int paint_text_fixedwidth(
+			Image_buffer8* win, const char* text, int xoff, int yoff,
+			int width, unsigned char* trans) override {
+		return ttfont.paint_text_fixedwidth(win, text, xoff, yoff, width, trans);
+	}
+
+	int paint_text_fixedwidth(
+			Image_buffer8* win, const char* text, int textlen, int xoff, int yoff,
+			int width, unsigned char* trans) override {
+		return ttfont.paint_text_fixedwidth(win, text, textlen, xoff, yoff, width, trans);
+	}
+
+	int paint_text_box_fixedwidth(
+			Image_buffer8* win, const char* text, int x, int y, int w, int h,
+			int char_width, int vert_lead, int pbreak,
+			unsigned char* trans) override {
+		return ttfont.paint_text_box_fixedwidth(
+				win, text, x, y, w, h, char_width, vert_lead, pbreak, trans);
+	}
+
+	bool is_loaded() const {
+		return ttfont.is_loaded();
+	}
+};
+
+/**
+ *  Loads a TrueType font and registers it by name in the font manager.
+ *  The font is stored via a TtFontWrapper that adapts TtFont to the Font
+ *  interface, allowing it to coexist with bitmap fonts in the same map.
+ *  @param name       Name to give to this font.
+ *  @param ttf_path   Path to the TTF file.
+ *  @param pixel_size Desired pixel height.
+ *  @param hlead      Horizontal lead (extra spacing between chars).
+ *  @param vlead      Vertical lead (extra spacing between lines).
+ *  @return Shared pointer to the registered Font, or nullptr on failure.
+ */
+	std::shared_ptr<Font> FontManager::add_ttf_font(
+		const char* name, const char* ttf_path, int pixel_size, int hlead, int vlead) {
+	remove_font(name);
+
+	auto wrapper = std::make_shared<TtFontWrapper>();
+	if (wrapper->load(ttf_path, pixel_size, hlead, vlead) != 0) {
+		return nullptr;
+	}
+
+	fonts[name] = wrapper;
+	return wrapper;
+}
+
+/**
+ *  Loads a TrueType font and registers it under @p name with full-text
+ *  routing via TtfFullFont. Every paint/get_text_width call converts font
+ *  bytes to UTF-8 before delegating to the TTF renderer, so ALL text
+ *  (ASCII + CJK) appears in the TrueType face.
+ *
+ *  Unlike add_ttf_font(), which stores a raw TtFontWrapper that expects
+ *  UTF-8 input, this method stores a TtfFullFont wrapper that first
+ *  converts Exult font bytes to UTF-8 via font_bytes_to_utf8().
+ *
+ *  @param name       Name to give to this font (e.g. "NORMAL_FONT").
+ *  @param ttf_path   Path to the TTF file.
+ *  @param pixel_size Desired pixel height.
+ *  @param hlead      Horizontal lead (extra spacing between chars).
+ *  @param vlead      Vertical lead (extra spacing between lines).
+ *  @return Shared pointer to the registered Font, or nullptr on failure.
+ */
+	std::shared_ptr<Font> FontManager::add_ttf_full_font(
+		const char* name, const char* ttf_path, int pixel_size, int hlead, int vlead) {
+	// First register a plain TTF wrapper so we have a Font object to wrap.
+	auto tc = add_ttf_font("ttf/_full", ttf_path, pixel_size, hlead, vlead);
+	if (!tc) {
+		return nullptr;
+	}
+
+	// Replace it with a TtfFullFont wrapper that converts font bytes → UTF-8.
+	auto full = std::make_shared<TtfFullFont>(std::move(tc));
+	remove_font("ttf/_full");
+	remove_font(name);
+	fonts[name] = full;
+	return full;
+}
+
+std::shared_ptr<Font> wrap_font_for_cjk(std::shared_ptr<Font> base) {
+	if (!base) {
+		return nullptr;
+	}
+	// Idempotent: don't wrap an already-wrapped font — doing so would
+	// cause the inner wrapper to treat UTF-8 output as font bytes and
+	// double-translate them, producing garbage.
+	if (std::dynamic_pointer_cast<CJKRoutingFont>(base)) {
+		return base;
+	}
+	return std::make_shared<CJKRoutingFont>(std::move(base));
 }

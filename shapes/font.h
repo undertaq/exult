@@ -65,7 +65,7 @@ public:
 	Font(const File_spec& fname0, const File_spec& fname1, int index, int hlead = 0, int vlead = 1);
 	Font(Font&&) noexcept            = default;
 	Font& operator=(Font&&) noexcept = default;
-	~Font() noexcept                 = default;
+	virtual ~Font() noexcept         = default;
 	/**
 	 *  Loads a font from a File_spec.
 	 *  @param fname0   First file spec.
@@ -86,37 +86,37 @@ public:
 	 */
 	int load(const File_spec& fname0, const File_spec& fname1, int index, int hlead = 0, int vlead = 1);
 	// Text rendering:
-	int paint_text_box(
+	virtual int paint_text_box(
 			Image_buffer8* win, const char* text, int x, int y, int w, int h, int vert_lead = 0, bool pbreak = false,
 			bool center = false, Cursor_info* cursor = nullptr, unsigned char* trans = nullptr);
-	int paint_text(Image_buffer8* win, const char* text, int xoff, int yoff, unsigned char* trans = nullptr);
+	virtual int paint_text(Image_buffer8* win, const char* text, int xoff, int yoff, unsigned char* trans = nullptr);
 
 	int paint_text_right_aligned(Image_buffer8* win, const char* text, int xoff, int yoff, unsigned char* trans = nullptr) {
 		return paint_text(win, text, xoff - get_text_width(text), yoff, trans);
 	}
 
-	int paint_text(Image_buffer8* win, const char* text, int textlen, int xoff, int yoff, unsigned char* trans = nullptr);
-	int paint_text_box_fixedwidth(
+	virtual int paint_text(Image_buffer8* win, const char* text, int textlen, int xoff, int yoff, unsigned char* trans = nullptr);
+	virtual int paint_text_box_fixedwidth(
 			Image_buffer8* win, const char* text, int x, int y, int w, int h, int char_width, int vert_lead = 0, int pbreak = 0,
 			unsigned char* trans = nullptr);
-	int paint_text_fixedwidth(Image_buffer8* win, const char* text, int xoff, int yoff, int width, unsigned char* trans = nullptr);
-	int paint_text_fixedwidth(
+	virtual int paint_text_fixedwidth(Image_buffer8* win, const char* text, int xoff, int yoff, int width, unsigned char* trans = nullptr);
+	virtual int paint_text_fixedwidth(
 			Image_buffer8* win, const char* text, int textlen, int xoff, int yoff, int width, unsigned char* trans = nullptr);
 	// Get text width.
-	int get_text_width(const char* text);
-	int get_text_width(const char* text, int textlen);
+	virtual int get_text_width(const char* text);
+	virtual int get_text_width(const char* text, int textlen);
 	// Get dimensions of text box for multiline string
-	void get_text_box_dims(const char* text, int& width, int& height, int vert_lead = 0);
+	virtual void get_text_box_dims(const char* text, int& width, int& height, int vert_lead = 0);
 	// Get text height, baseline, and vertical lead.
-	int get_text_height();
-	int get_text_baseline();
+	virtual int get_text_height();
+	virtual int get_text_baseline();
 
-	int get_ver_lead() const {
+	virtual int get_ver_lead() const {
 		return ver_lead;
 	}
 
-	int find_cursor(const char* text, int x, int y, int w, int h, int cx, int cy, int vert_lead);
-	int find_xcursor(const char* text, int textlen, int cx);
+	virtual int find_cursor(const char* text, int x, int y, int w, int h, int cx, int cy, int vert_lead);
+	virtual int find_xcursor(const char* text, int textlen, int cx);
 
 	int draw_text(Image_buffer8* win, int x, int y, const char* s, unsigned char* trans = nullptr) {
 		return paint_text(win, s, x, y, trans);
@@ -143,9 +143,49 @@ public:
 	void remove_font(const char* name);
 	std::shared_ptr<Font> get_font(const char* name);
 
+	/**
+	 *  Loads a TrueType font and registers it by name.
+	 *  @param name      Name to give to this font.
+	 *  @param ttf_path  Path to the TTF file.
+	 *  @param pixel_size Desired pixel height.
+	 *  @param hlead     Horizontal lead (extra spacing between chars).
+	 *  @param vlead     Vertical lead (extra spacing between lines).
+	 *  @return Shared pointer to the registered Font, or nullptr on failure.
+	 */
+	std::shared_ptr<Font> add_ttf_font(const char* name, const char* ttf_path, int pixel_size, int hlead = 0, int vlead = 1);
+
+	/**
+	 *  Loads a TrueType font with full-text routing under @p name.
+	 *  Every paint/get_text_width call converts font bytes to UTF-8 first,
+	 *  so ALL text (ASCII + CJK) is rendered via the TrueType face.
+	 *  @param name       Name to give to this font (e.g. "NORMAL_FONT").
+	 *  @param ttf_path   Path to the TTF file.
+	 *  @param pixel_size Desired pixel height.
+	 *  @param hlead      Horizontal lead (extra spacing between chars).
+	 *  @param vlead      Vertical lead (extra spacing between lines).
+	 *  @return Shared pointer to the registered Font, or nullptr on failure.
+	 */
+	std::shared_ptr<Font> add_ttf_full_font(const char* name, const char* ttf_path, int pixel_size, int hlead = 0, int vlead = 1);
+
 	void reset();
 };
 
 extern FontManager fontManager;
+
+class CJKRoutingFont;    // Forward decl for wrap_font_for_cjk idempotency check.
+
+/**
+ *  Wrap a Font with a CJK routing layer.
+ *  When the TC font (registered as "ttf/tc") is loaded and the text
+ *  contains font bytes in the CJK range (>= 0x80), the wrapper routes
+ *  rendering and measurement calls to the TC font after reverse-translating
+ *  font bytes back to UTF-8. Pure-ASCII text bypasses the TC font for
+ *  zero performance overhead.
+ *  This function is idempotent: if @p base is already a CJKRoutingFont,
+ *  it is returned unchanged.
+ *  @param base  The font to wrap (e.g. a bitmap Font).
+ *  @return A shared_ptr to a CJKRoutingFont wrapper.
+ */
+std::shared_ptr<Font> wrap_font_for_cjk(std::shared_ptr<Font> base);
 
 #endif

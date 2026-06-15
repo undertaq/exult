@@ -291,6 +291,14 @@ void Shape_manager::load() {
 	override_vleads();
 	fonts->init(font_source, font_patch, vlead_override, num_vlead_overrides);
 
+	// Auto-apply CJK routing if TC font was already loaded by
+	// Game::setup_text() (which runs before init_files/load).
+	// Without this, indexed fonts accessed via sman->get_font(num)
+	// would never get CJK wrapping on initial startup.
+	if (fontManager.get_font("ttf/tc")) {
+		fonts->enable_cjk_routing();
+	}
+
 	// Get translucency tables.
 	unique_ptr<unsigned char[]> ptr;    // We will delete THIS at the end, not blends!
 	// ++++TODO: Make this file editable in ES.
@@ -441,6 +449,12 @@ void Shape_manager::reload_fonts(const File_spec& font_source, const File_spec& 
 	if (fonts) {
 		override_vleads();
 		fonts->init(font_source, font_patch, vlead_override, num_vlead_overrides);
+	}
+}
+
+void Shape_manager::enable_cjk_routing() {
+	if (fonts) {
+		fonts->enable_cjk_routing();
 	}
 }
 

@@ -114,6 +114,13 @@ public:
 			const File_spec& font_patch = PATCH_FONTS);    // Reload fonts from a different source.
 	void reload_shape_info();
 
+	/**
+	 *  Wrap all indexed fonts with CJK routing.  After a TC TTF font has
+	 *  been loaded, this ensures that strings containing CJK font bytes are
+	 *  rendered through the TrueType path.  Safe to call at any time.
+	 */
+	void enable_cjk_routing();
+
 	static unsigned char get_special_pixel(int pixel) {
 		if (pixel > -256 && pixel < 0) {
 			return -pixel;

@@ -88,6 +88,14 @@ public:
 	std::shared_ptr<Font> get_font(int fontnum) {
 		return (fontnum >= 0 && static_cast<unsigned int>(fontnum) < fonts.size()) ? (fonts[fontnum]) : nullptr;
 	}
+
+	/**
+	 *  Wrap all indexed fonts with CJK routing, so that strings containing
+	 *  CJK font bytes are rendered through the TC TTF font (if loaded).
+	 *  Safe to call even when no TC font is loaded — the routing wrapper
+	 *  lazily checks availability at render time.
+	 */
+	void enable_cjk_routing();
 };
 
 #endif

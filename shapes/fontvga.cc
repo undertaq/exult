@@ -84,3 +84,11 @@ void Fonts_vga_file::init(
 		fonts[i] = std::make_shared<Font>(font_source, font_patch, i, i < hlead.size() ? hlead[i] : 0, vl);
 	}
 }
+
+void Fonts_vga_file::enable_cjk_routing() {
+	for (auto& f : fonts) {
+		if (f) {
+			f = wrap_font_for_cjk(std::move(f));
+		}
+	}
+}
