@@ -1,0 +1,64 @@
+TTF/OTF Font Setup for Traditional Chinese (TC) Support
+========================================================
+
+Exult can render TrueType/OpenType fonts via FreeType when configured
+with --enable-freetype2 (HAVE_FREETYPE2).
+
+Recommended fonts
+-----------------
+
+1. Noto Sans TC (Google, SIL OFL)
+   - Traditional Chinese focused, also covers all CJK Unified Ideographs
+   - Download: https://fonts.google.com/noto/specimen/Noto+Sans+TC
+   - Direct download: https://github.com/googlefonts/noto-cjk/releases
+   - File: NotoSansTC-Regular.ttf (or NotoSansCJK-Regular.ttc)
+   - License: SIL Open Font License 1.1 (compatible with GPLv2)
+
+2. Noto Sans SC (Google, SIL OFL)
+   - Simplified Chinese, also covers TC characters in the shared CJK block
+   - Same URLs as above, select SC variant
+   - License: SIL Open Font License 1.1
+
+3. Source Han Sans (Adobe, SIL OFL)
+   - Same design as Noto CJK; identical character coverage
+   - License: SIL Open Font License 1.1
+
+4. WenQuanYi Micro Hei (GPL with font exception)
+   - Lightweight Chinese font
+   - May lack some traditional characters
+   - License: GPLv2 with font exception (compatible with Exult's GPLv2)
+
+Installation
+------------
+
+Place any of the above TTF/OTF fonts in this directory:
+
+    data/fonts/
+
+The recommended filename is:
+
+    notosanscjk.ttf   (or create a symlink)
+
+Then configure Exult to use the TTF font via exult.cfg or the
+in-game settings dialog.
+
+Font map
+--------
+
+The file font_map_tc.txt maps CJK Unicode codepoints to font frame
+bytes (0x80-0xFF). It follows the same format as the builtin_tc
+section in font_map.txt and can be:
+
+  - Merged into the builtin_tc section of font_map.txt before bundling
+  - Loaded as a supplementary patch file (future enhancement)
+  - Used as a reference for character coverage
+
+The map currently contains 123 characters covering:
+
+  - 10 existing characters from font_map.txt (frames 0x80-0x89)
+  - 113 new characters (frames 0x8A-0xFA)
+  - Particles/grammar words (的, 是, 不, 有, 在, etc.)
+  - Common verbs (開, 關, 存, 取, 說, 讀, 寫, etc.)
+  - Game UI nouns (遊戲, 設定, 選擇, 項目, etc.)
+  - Spatial/temporal words (上下左右前後, 時日年月, etc.)
+  - Elements (水水火風土木金, colors, etc.)
