@@ -28,6 +28,8 @@ libshapes_la_SOURCES += \
 	font_map.h \
 	fontgen.cc \
 	fontgen.h \
+	ttfont.cc \
+	ttfont.h \
 	fontvga.cc \
 	fontvga.h \
 	items.cc \

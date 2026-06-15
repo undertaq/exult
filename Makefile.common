@@ -319,7 +319,8 @@ EXULT_FLX_OBJECTS := \
 	data/fonts_original.vga \
 	data/fonts_serif.vga \
 	data/shortcutbar.vga \
-	data/fonts/font_map.txt
+	data/fonts/font_map.txt \
+	data/fonts/font_map_tc.txt
 
 EXULT_FONTS_ORIGINAL_VGA := data/fonts_original.vga data/fonts_original_vga.h
 EXULT_FONTS_ORIGINAL_VGA_OBJECTS := \
