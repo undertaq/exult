@@ -59,6 +59,7 @@
 #include <regex>
 #include <sstream>
 
+using std::cerr;
 using std::cout;
 using std::endl;
 using std::ifstream;
@@ -207,6 +208,43 @@ void Game::setup_text() {
 	bool use_special_chars = (font_config == "original" || font_config == "serif");
 	set_font_map_use_special_chars(use_special_chars);
 
+	// Traditional Chinese (TC) TTF font setup
+	std::string tc_enabled;
+	config->value("config/gameplay/font_tc_enabled", tc_enabled, "no");
+	Pentagram::tolower(tc_enabled);
+	if (tc_enabled == "yes") {
+		std::string tc_file;
+		config->value("config/gameplay/font_tc_file", tc_file, "");
+		if (!tc_file.empty()) {
+			int tc_size = 16;
+			config->value("config/gameplay/font_tc_size", tc_size, 16);
+			// Resolve path; if relative and missing, try <DATA>/fonts/ as fallback.
+			std::string resolved_path = get_system_path(tc_file);
+			if (tc_file.find('<') == std::string::npos && !U7exists(resolved_path)) {
+				std::string fname = tc_file;
+				auto sep = fname.find_last_of("/\\");
+				if (sep != std::string::npos) {
+					fname = fname.substr(sep + 1);
+				}
+				std::string alt = get_system_path("<DATA>/fonts/" + fname);
+				if (U7exists(alt)) {
+					resolved_path = alt;
+				}
+			}
+			auto tc_font = fontManager.add_ttf_font("ttf/tc", resolved_path.c_str(), tc_size);
+			if (tc_font) {
+				cout << "Loaded TC font: " << tc_file << " (size: " << tc_size << ")" << endl;
+				// Enable CJK routing on indexed (Fonts_vga_file) fonts too.
+				auto* sman = Shape_manager::get_instance();
+				if (sman) {
+					sman->enable_cjk_routing();
+				}
+			} else {
+				cerr << "Warning: failed to load TC font: " << tc_file << endl;
+			}
+		}
+	}
+
 	Setup_text(
 			get_game_type() == SERPENT_ISLE, has_expansion(), get_game_type() == SERPENT_ISLE && is_si_beta(),
 			get_game_message_language(), use_special_chars);
@@ -292,6 +330,102 @@ void Game::setup_fonts() {
 			fontManager.add_font("SIINTRO_FONT", INTRO_DAT, PATCH_INTRO, 14, 0, -5);
 			fontManager.add_font("EXULT_END_FONT", font_source, font_patch, 0, -2);
 			fontManager.add_font("EXULT_AT_FONT", File_spec(fname, EXULT_FLX_FONTS_ORIGINAL_VGA), PATCH_ORIGINAL_FONTS, 14, -2);
+		}
+	}
+
+	// Traditional Chinese (TC) TTF font setup (reload on display option changes)
+	std::string tc_enabled;
+	config->value("config/gameplay/font_tc_enabled", tc_enabled, "no");
+	Pentagram::tolower(tc_enabled);
+	if (tc_enabled == "yes") {
+		std::string tc_file;
+		config->value("config/gameplay/font_tc_file", tc_file, "");
+		if (!tc_file.empty()) {
+			int tc_size = 16;
+			config->value("config/gameplay/font_tc_size", tc_size, 16);
+			// Resolve path; if relative and missing, try <DATA>/fonts/ as fallback.
+			std::string resolved_path = get_system_path(tc_file);
+			if (tc_file.find('<') == std::string::npos && !U7exists(resolved_path)) {
+				std::string fname = tc_file;
+				auto sep = fname.find_last_of("/\\");
+				if (sep != std::string::npos) {
+					fname = fname.substr(sep + 1);
+				}
+				std::string alt = get_system_path("<DATA>/fonts/" + fname);
+				if (U7exists(alt)) {
+					resolved_path = alt;
+				}
+			}
+			auto tc_font = fontManager.add_ttf_font("ttf/tc", resolved_path.c_str(), tc_size);
+			if (tc_font) {
+				cout << "Loaded TC font: " << tc_file << " (size: " << tc_size << ")" << endl;
+				// Enable CJK routing on indexed (Fonts_vga_file) fonts too.
+				auto* sman = Shape_manager::get_instance();
+				if (sman) {
+					sman->enable_cjk_routing();
+				}
+			} else {
+				cerr << "Warning: failed to load TC font: " << tc_file << endl;
+			}
+		}
+	}
+
+	// TTF renderer mode: route CJK text through the TrueType face while
+	// keeping ASCII text on the original bitmap fonts. Unlike the old
+	// full-TTF approach (which replaced every bitmap font with a TtfFullFont),
+	// this relies on FontManager::get_font() wrapping each font with a
+	// CJKRoutingFont when the "ttf/tc" font is registered. ASCII font bytes
+	// stay on the bitmap font (preserving the classic game look), while font
+	// bytes >= 0x80 (CJK) are converted to UTF-8 and rendered via TTF.
+	//
+	// Set <font_renderer>ttf</font_renderer> in exult.cfg. Requires
+	// <font_tc_file> to point to the CJK TTF font.
+	std::string font_renderer;
+	config->value("config/gameplay/font_renderer", font_renderer, "original");
+	Pentagram::tolower(font_renderer);
+	if (font_renderer == "ttf") {
+		// Need the TC font loaded. If font_tc_enabled wasn't "yes", load
+		// it now with the same path-resolution logic as above.
+		if (tc_enabled != "yes") {
+			std::string tc_file;
+			config->value("config/gameplay/font_tc_file", tc_file, "");
+			if (!tc_file.empty()) {
+				int tc_size = 16;
+				config->value("config/gameplay/font_tc_size", tc_size, 16);
+				std::string resolved_path = get_system_path(tc_file);
+				if (tc_file.find('<') == std::string::npos && !U7exists(resolved_path)) {
+					std::string fname = tc_file;
+					auto sep = fname.find_last_of("/\\");
+					if (sep != std::string::npos) {
+						fname = fname.substr(sep + 1);
+					}
+					std::string alt = get_system_path("<DATA>/fonts/" + fname);
+					if (U7exists(alt)) {
+						resolved_path = alt;
+					}
+				}
+				auto tc_font = fontManager.add_ttf_font("ttf/tc", resolved_path.c_str(), tc_size);
+				if (tc_font) {
+					cout << "TTF mode: loaded TC font for CJK routing ("
+						 << tc_file << ", size " << tc_size << ")" << endl;
+					// Enable CJK routing on indexed Fonts_vga_file fonts too.
+					auto* sman = Shape_manager::get_instance();
+					if (sman) {
+						sman->enable_cjk_routing();
+					}
+				} else {
+					cerr << "Warning: failed to load TC font: " << tc_file << endl;
+				}
+			}
+		}
+
+		// CJKRoutingFont wrapping in get_font() automatically handles the
+		// routing when "ttf/tc" is registered — no explicit replacement of
+		// bitmap fonts is needed here.
+		if (fontManager.get_font("ttf/tc")) {
+			cout << "TTF mode: CJK text routed through TTF, ASCII uses bitmap fonts" << endl;
+		} else {
+			cerr << "Warning: font_renderer=ttf requires font_tc_file to be set" << endl;
 		}
 	}
 }
