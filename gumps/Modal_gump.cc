@@ -28,6 +28,27 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <algorithm>
 
+// Get row height dynamically based on the actual font height.
+static int get_row_height() {
+	auto font = fontManager.get_font("SMALL_BLACK_FONT");
+	if (font) {
+		int text_height = font->get_text_height();
+		// Ensure minimum height of 12 (original bitmap) with 2px padding
+		return std::max(12, text_height + 2);
+	}
+	return 12;
+}
+
+int Modal_gump::yForRow(int row) {
+	int row_height = get_row_height();
+	if (row <= 12) {
+		return 5 + row * row_height;
+	} else {
+		// First 12 rows use row_height, rows above use row_height + 2
+		return 5 + 12 * row_height + (row - 12) * (row_height + 2);
+	}
+}
+
 Modal_gump::Modal_gump(Container_game_object* cont, int initx, int inity, int shnum, ShapeFile shfile, std::shared_ptr<Font> font)
 		: Gump(cont, initx, inity, shnum, shfile), done(false), pushed(nullptr),
 		  font(font ? std::move(font) : fontManager.get_font("SMALL_BLACK_FONT")), drag_mx(INT_MIN), drag_my(INT_MIN),

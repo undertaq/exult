@@ -247,16 +247,11 @@ public:
 	// Only works for Gumps with Procedural background
 	void ResizeWidthToFitText(const char* text);
 
-	// Get Y position for a row
-	// Rows up to 12 are 12 pixels high,
-	// rows above 12 are 14 pixels high
-	constexpr static int yForRow(int row) {
-		if (row <= 12) {
-			return 5 + row * 12;
-		} else {
-			return 149 + (row - 12) * 14;
-		}
-	}
+	// Get Y position for a row.
+	// Row height is dynamic: based on the actual font height of
+	// SMALL_BLACK_FONT, with a minimum of 12 pixels (original bitmap size).
+	// This ensures buttons don't overlap when using taller TTF fonts.
+	static int yForRow(int row);
 };
 
 #endif
