@@ -89,6 +89,35 @@
 :C2A1/86
 %%endsection
 
+%%section builtin_tc
+#	Format
+#		:UTF-8 Hex Byte/frame number
+#	Traditional Chinese / CJK Unified Ideographs (3-byte UTF-8 sequences).
+#	Maps 3-byte UTF-8 sequences to font frame numbers for built-in TC fonts.
+#	CJK Unified Ideographs (U+4E00-U+9FFF) use 0xE4-0xE9 prefix.
+
+# 中 (U+4E2D) - "middle/center"
+:E4B8AD/80
+# 文 (U+6587) - "text/culture"
+:E69687/81
+# 字 (U+5B57) - "character"
+:E5AD97/82
+# 國 (U+570B) - "country" (traditional)
+:E59C8B/83
+# 語 (U+8A9E) - "language"
+:E8AA9E/84
+# 歡 (U+6B61) - "welcome/joy"
+:E6ADA1/85
+# 迎 (U+8FCE) - "welcome/meet"
+:E8BFAE/86
+# 光 (U+5149) - "light"
+:E58589/87
+# 榮 (U+69AE) - "glory/honor" (traditional)
+:E6A7AE/88
+# 譽 (U+8B3D) - "honor/reputation" (traditional)
+:E8ACBD/89
+%%endsection
+
 %%section original
 #	Format
 #		:UTF-8 Hex Byte/replacement character

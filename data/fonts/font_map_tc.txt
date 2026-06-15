@@ -1,0 +1,143 @@
+# Traditional Chinese / CJK font map for Exult
+#
+# Maps UTF-8 hex byte sequences to font frame bytes for CJK
+# Unified Ideographs (U+4E00-U+9FFF, 3-byte UTF-8 sequences).
+#
+# Frame byte range: 0x80-0xFF (128 slots)
+#
+# CC0 / Public Domain - share freely.
+
+%%section builtin_tc
+#
+# Format: :UTF8HEX/FRAMEBYTE    # CHAR (U+UNICODE) - meaning
+#
+# UTF8HEX is the 6-hex-digit UTF-8 encoding of the CJK character.
+# FRAMEBYTE is the 2-hex-digit font frame byte (0x80-0xFF).
+
+:E4B8AD/80    # 銝?(U+4E2D) - middle / center
+:E69687/81    # ??(U+6587) - text / culture
+:E5AD97/82    # 摮?(U+5B57) - character / letter
+:E59C8B/83    # ??(U+570B) - country (TC)
+:E8AA9E/84    # 隤?(U+8A9E) - language
+:E6ADA1/85    # 甇?(U+6B61) - welcome / joy
+:E8BF8E/86    # 餈?(U+8FCE) - welcome / meet
+:E58589/87    # ??(U+5149) - light / glory
+:E6A6AE/88    # 璁?(U+69AE) - glory / honor (TC)
+:E8ACBD/89    # 雓?(U+8B3D) - honor / reputation (TC)
+:E79A84/8A    # ??(U+7684) - possessive particle
+:E698AF/8B    # ??(U+662F) - to be / yes
+:E4B88D/8C    # 銝?(U+4E0D) - not / no
+:E69C89/8D    # ??(U+6709) - to have / exist
+:E59CA8/8E    # ??(U+5728) - at / in / exist
+:E4BA86/8F    # 鈭?(U+4E86) - completed action
+:E4BABA/90    # 鈭?(U+4EBA) - person / people
+:E4BDA0/91    # 雿?(U+4F60) - you
+:E68891/92    # ??(U+6211) - I / me
+:E4BB96/93    # 隞?(U+4ED6) - he / him
+:E5A5B9/94    # 憟?(U+5979) - she / her
+:E58091/95    # ??(U+5011) - plural suffix
+:E98099/96    # ??(U+9019) - this (TC)
+:E982A3/97    # ??(U+90A3) - that
+:E5808B/98    # ??(U+500B) - generic counter
+:E4BB80/99    # 隞 (U+4EC0) - what (隞)
+:E9BABC/9A    # 暻?(U+9EBC) - what (暻?TC)
+:E5978E/9B    # ??(U+55CE) - question particle
+:E883BD/9C    # ??(U+80FD) - can / able
+:E69C83/9D    # ??(U+6703) - will / able (TC)
+:E8A681/9E    # 閬?(U+8981) - want / need
+:E58FAF/9F    # ??(U+53EF) - can / may
+:E4BBA5/A0    # 隞?(U+4EE5) - to use / with
+:E5819A/A1    # ??(U+505A) - to do / make
+:E68890/A2    # ??(U+6210) - to become / done
+:E79C8B/A3    # ??(U+770B) - to see / look
+:E8AAAA/A4    # 隤?(U+8AAA) - to speak (TC)
+:E881BD/A5    # ??(U+807D) - to listen (TC)
+:E8AE80/A6    # 霈 (U+8B80) - to read (TC)
+:E5AFAB/A7    # 撖?(U+5BEB) - to write (TC)
+:E68993/A8    # ??(U+6253) - to hit / type
+:E9968B/A9    # ??(U+958B) - to open (TC)
+:E9979C/AA    # ??(U+95DC) - to close (TC)
+:E5AD98/AB    # 摮?(U+5B58) - to save / store
+:E58F96/AC    # ??(U+53D6) - to take / get
+:E588AA/AD    # ??(U+522A) - to delete
+:E696B0/AE    # ??(U+65B0) - new
+:E5A29E/AF    # 憓?(U+589E) - to add / increase
+:E4BFAE/B0    # 靽?(U+4FEE) - to fix / modify
+:E694B9/B1    # ??(U+6539) - to change / alter
+:E5B087/B2    # 撠?(U+5C07) - will / future (TC)
+:E8BC89/B3    # 頛?(U+8F09) - to load / carry
+:E582B3/B4    # ??(U+50B3) - to pass / transmit (TC)
+:E98081/B5    # ??(U+9001) - to send / deliver
+:E689BE/B6    # ??(U+627E) - to look for / find
+:E9818A/B7    # ??(U+904A) - play / game (TC)
+:E688B2/B8    # ??(U+6232) - drama / game
+:E8A8AD/B9    # 閮?(U+8A2D) - setting / set (TC)
+:E5AE9A/BA    # 摰?(U+5B9A) - fixed / set / certain
+:E981B8/BB    # ??(U+9078) - choose / select (TC)
+:E9A085/BC    # ??(U+9805) - item / paragraph
+:E79BAE/BD    # ??(U+76EE) - item / eye / list
+:E98080/BE    # ? (U+9000) - exit / retreat
+:E587BA/BF    # ??(U+51FA) - exit / go out
+:E585A5/C0    # ??(U+5165) - enter / go in
+:E794BB/C1    # ??(U+753B) - picture / draw
+:E99DA2/C2    # ??(U+9762) - face / surface
+:E99FB3/C3    # ??(U+97F3) - sound
+:E6A882/C4    # 璅?(U+6A02) - music / joy
+:E8A9B1/C5    # 閰?(U+8A71) - speech / language
+:E5B08D/C6    # 撠?(U+5C0D) - correct / toward (TC)
+:E98CAF/C7    # ??(U+932F) - wrong / error (TC)
+:E8AAA4/C8    # 隤?(U+8AA4) - mistake (TC)
+:E6ADA3/C9    # 甇?(U+6B63) - correct / proper
+:E7A2BA/CA    # 蝣?(U+78BA) - certain / confirm
+:E8AA8D/CB    # 隤?(U+8A8D) - recognize / admit (TC)
+:E8A88A/CC    # 閮?(U+8A0A) - message / news (TC)
+:E681AF/CD    # ??(U+606F) - news / information
+:E78B80/CE    # ? (U+72C0) - state / form (TC)
+:E6858B/CF    # ??(U+614B) - state / attitude
+:E5B9AB/D0    # 撟?(U+5E6B) - to help (TC)
+:E58AA9/D1    # ??(U+52A9) - to help / assist
+:E69982/D2    # ??(U+6642) - time (TC)
+:E99693/D3    # ??(U+9593) - interval / between
+:E5908D/D4    # ??(U+540D) - name
+:E7A8B1/D5    # 蝔?(U+7A31) - title / name (TC)
+:E9A19E/D6    # 憿?(U+985E) - category / kind
+:E7A8AE/D7    # 蝔?(U+7A2E) - type / kind / seed
+:E4B88A/D8    # 銝?(U+4E0A) - up / above / previous
+:E4B88B/D9    # 銝?(U+4E0B) - down / below / next
+:E5B7A6/DA    # 撌?(U+5DE6) - left
+:E58FB3/DB    # ??(U+53F3) - right
+:E5898D/DC    # ??(U+524D) - front / before
+:E5BE8C/DD    # 敺?(U+5F8C) - back / after (TC)
+:E585A7/DE    # ??(U+5167) - inside (TC)
+:E5A496/DF    # 憭?(U+5916) - outside
+:E5A4A7/E0    # 憭?(U+5927) - big / large
+:E5B08F/E1    # 撠?(U+5C0F) - small / little
+:E5A49A/E2    # 憭?(U+591A) - many / much
+:E5B091/E3    # 撠?(U+5C11) - few / little
+:E697A5/E4    # ??(U+65E5) - day / sun
+:E69C88/E5    # ??(U+6708) - moon / month
+:E5B9B4/E6    # 撟?(U+5E74) - year
+:E5A4A9/E7    # 憭?(U+5929) - sky / heaven / day
+:E59CB0/E8    # ??(U+5730) - earth / ground / land
+:E6B0B4/E9    # 瘞?(U+6C34) - water
+:E781AB/EA    # ??(U+706B) - fire
+:E9A2A8/EB    # 憸?(U+98A8) - wind (TC)
+:E59C9F/EC    # ??(U+571F) - earth / soil
+:E98791/ED    # ??(U+91D1) - gold / metal
+:E69CA8/EE    # ??(U+6728) - wood / tree
+:E5A5BD/EF    # 憟?(U+597D) - good / fine
+:E5BE88/F0    # 敺?(U+5F88) - very / quite
+:E5A4AA/F1    # 憭?(U+592A) - too / excessively
+:E585A8/F2    # ??(U+5168) - whole / all (TC)
+:E9AB98/F3    # 擃?(U+9AD8) - tall / high
+:E7BE8E/F4    # 蝢?(U+7F8E) - beautiful
+:E6988E/F5    # ??(U+660E) - bright / clear
+:E799BD/F6    # ??(U+767D) - white / plain
+:E9BB91/F7    # 暺?(U+9ED1) - black (TC)
+:E7B485/F8    # 蝝?(U+7D05) - red (TC)
+:E7B6A0/F9    # 蝬?(U+7DA0) - green (TC)
+:E8978D/FA    # ??(U+85CD) - blue (TC)
+
+%%endsection
+
+# EOF

@@ -36,10 +36,14 @@ using std::endl;
 
 static std::unordered_map<std::string, std::string> utf8_to_font_special;
 static std::unordered_map<std::string, std::string> utf8_to_font_ascii;
+// TC (Traditional Chinese / CJK) map for 3-byte UTF-8 sequences.
+static std::unordered_map<std::string, std::string> utf8_to_font_tc;
 // Reverse lookup of utf8_to_font_special, indexed by font byte. Each entry is
 // a NUL-terminated UTF-8 sequence (max 4 bytes + NUL). Empty first byte means
 // "no mapping".
 static char font_to_utf8_special[256][FONT_MAP_MAX_UTF8_BYTES + 1] = {};
+// Reverse lookup of utf8_to_font_tc, indexed by font byte.
+static char font_to_utf8_tc[256][FONT_MAP_MAX_UTF8_BYTES + 1] = {};
 static bool font_maps_initialized                                  = false;
 
 // Convert a hex string like "C387" to the corresponding bytes "\xC3\x87".
@@ -101,6 +105,30 @@ static void ensure_font_maps_loaded() {
 			std::string key                    = hex_to_bytes({s.data(), slash});
 			utf8_to_font_ascii[std::move(key)] = s.substr(slash + 1);
 		}
+
+		// builtin_tc section: entries are  <UTF8HEX>/<HEXBYTE>  e.g. E4B8AD/80
+		// For 3-byte UTF-8 CJK characters (U+4E00-U+9FFF range uses 0xE4-0xE9 prefix).
+		reader.get_section_strings("builtin_tc", strings);
+		for (const auto& s : strings) {
+			if (s.empty()) {
+				continue;
+			}
+			const auto slash = s.find('/');
+			if (slash == std::string::npos) {
+				continue;
+			}
+			std::string   key = hex_to_bytes({s.data(), slash});
+			unsigned char val = 0;
+			std::from_chars(s.data() + slash + 1, s.data() + s.size(), val, 16);
+			if (key.size() <= FONT_MAP_MAX_UTF8_BYTES) {
+				auto& slot = font_to_utf8_tc[val];
+				if (slot[0] == '\0') {
+					std::memcpy(slot, key.data(), key.size());
+					slot[key.size()] = '\0';
+				}
+			}
+			utf8_to_font_tc[std::move(key)] = std::string(1, static_cast<char>(val));
+		}
 	};
 
 	// Base font map: always loaded from exult.flx.
@@ -122,6 +150,25 @@ static void ensure_font_maps_loaded() {
 			parse_reader(reader);
 		}
 	}
+
+	// TC (Traditional Chinese) font map — loaded from static directory.
+	// This file contains CJK character mappings in the "builtin_tc" section.
+	if (is_system_path_defined("<STATIC>") && U7exists(FONT_MAP_TC)) {
+		IFileDataSource ds(FONT_MAP_TC, true);
+		if (ds.good()) {
+			Text_msg_file_reader reader(ds);
+			parse_reader(reader);
+		}
+	}
+
+	// Patch overlay for the TC font map.
+	if (is_system_path_defined("<PATCH>") && U7exists(PATCH_FONT_MAP_TC)) {
+		IFileDataSource ds(PATCH_FONT_MAP_TC, true);
+		if (ds.good()) {
+			Text_msg_file_reader reader(ds);
+			parse_reader(reader);
+		}
+	}
 }
 
 void translate_utf8_to_font_hex(std::string& text, bool use_special_chars) {
@@ -133,8 +180,21 @@ void translate_utf8_to_font_hex(std::string& text, bool use_special_chars) {
 
 	size_t i = 0;
 	while (i < text.size()) {
+		unsigned char c = static_cast<unsigned char>(text[i]);
+
+		// 3-byte UTF-8 sequence (0xE0-0xEF followed by two 0x80-0xBF bytes).
+		// Only handled when use_special_chars is true (for builtin/TC fonts).
+		if (use_special_chars && i + 2 < text.size() && (c & 0xF0) == 0xE0) {
+			auto it = utf8_to_font_tc.find(std::string(text.data() + i, 3));
+			if (it != utf8_to_font_tc.end()) {
+				result += it->second;
+				i += 3;
+				continue;
+			}
+		}
+
 		// 2-byte UTF-8 sequence (0xC0-0xDF followed by 0x80-0xBF).
-		if (i + 1 < text.size() && (static_cast<unsigned char>(text[i]) & 0xE0) == 0xC0) {
+		if (i + 1 < text.size() && (c & 0xE0) == 0xC0) {
 			auto it = utf8_map.find(std::string(text.data() + i, 2));
 			if (it != utf8_map.end()) {
 				result += it->second;
@@ -165,6 +225,13 @@ void translate_usecode_text(std::string& text) {
 size_t translate_font_hex_to_utf8(unsigned char font_byte, char out[FONT_MAP_MAX_UTF8_BYTES + 1]) {
 	ensure_font_maps_loaded();
 	const char* mapped = font_to_utf8_special[font_byte];
+	if (mapped[0] != '\0') {
+		size_t len = std::strlen(mapped);
+		std::memcpy(out, mapped, len + 1);
+		return len;
+	}
+	// Check TC (CJK) reverse mapping.
+	mapped = font_to_utf8_tc[font_byte];
 	if (mapped[0] != '\0') {
 		size_t len = std::strlen(mapped);
 		std::memcpy(out, mapped, len + 1);

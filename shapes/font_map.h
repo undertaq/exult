@@ -20,6 +20,7 @@
 #define INCL_FONT_MAP_H
 
 #include <string>
+#include <unordered_map>
 
 // Translate UTF-8 encoded special characters to font byte positions, in place.
 // If use_special_chars is true, multi-byte UTF-8 sequences are mapped to the
