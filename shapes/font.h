@@ -118,6 +118,26 @@ public:
 	virtual int find_cursor(const char* text, int x, int y, int w, int h, int cx, int cy, int vert_lead);
 	virtual int find_xcursor(const char* text, int textlen, int cx);
 
+	/**
+	 *  Get the default pixel value (palette index) used by this font
+	 *  for text rendering. For bitmap fonts, this is extracted from the
+	 *  'X' glyph's RLE data. For TTF fonts, returns the configured color.
+	 */
+	virtual unsigned char get_text_pixel() const;
+	/**
+	 *  Set the text color for this font. For TTF fonts, this sets the
+	 *  foreground and shadow palette indices used by subsequent paint
+	 *  calls. Bitmap fonts ignore this since the color is baked into
+	 *  their glyph pixel data.
+	 *  @param fg  Foreground palette index.
+	 *  @param sh  Shadow palette index (-1 = no shadow).
+	 */
+	virtual void set_text_color(unsigned char fg, int sh) {
+		// Bitmap fonts ignore this; TTF fonts override it.
+		(void)fg;
+		(void)sh;
+	}
+
 	int draw_text(Image_buffer8* win, int x, int y, const char* s, unsigned char* trans = nullptr) {
 		return paint_text(win, s, x, y, trans);
 	}

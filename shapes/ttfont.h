@@ -286,6 +286,13 @@ public:
 					unsigned char fg_color = 255, int sh_color = -1,
 					unsigned char* trans = nullptr);
 
+	// Set the fg/sh colors used by fixed-width paint methods
+	// (which lack per-call color parameters).
+	void set_color(unsigned char fg, int sh) {
+		fg_color = fg;
+		sh_color = sh;
+	}
+
 	bool is_loaded() const {
 #ifdef HAVE_FREETYPE2
 		return ft_face != nullptr;
@@ -293,6 +300,10 @@ public:
 		return false;
 #endif
 	}
+
+private:
+	unsigned char fg_color = 255;    // Default fg pixel used when
+	int           sh_color = -1;     //   paint_text_fixedwidth is called.
 };
 
 #endif /* TT_FONT_H */

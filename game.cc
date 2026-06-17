@@ -216,7 +216,7 @@ void Game::setup_text() {
 		std::string tc_file;
 		config->value("config/gameplay/font_tc_file", tc_file, "");
 		if (!tc_file.empty()) {
-			int tc_size = 16;
+			int tc_size = 20;
 			config->value("config/gameplay/font_tc_size", tc_size, 16);
 			// Resolve path; if relative and missing, try <DATA>/fonts/ as fallback.
 			std::string resolved_path = get_system_path(tc_file);
@@ -341,7 +341,7 @@ void Game::setup_fonts() {
 		std::string tc_file;
 		config->value("config/gameplay/font_tc_file", tc_file, "");
 		if (!tc_file.empty()) {
-			int tc_size = 16;
+			int tc_size = 20;
 			config->value("config/gameplay/font_tc_size", tc_size, 16);
 			// Resolve path; if relative and missing, try <DATA>/fonts/ as fallback.
 			std::string resolved_path = get_system_path(tc_file);
@@ -390,7 +390,7 @@ void Game::setup_fonts() {
 			std::string tc_file;
 			config->value("config/gameplay/font_tc_file", tc_file, "");
 			if (!tc_file.empty()) {
-				int tc_size = 16;
+				int tc_size = 20;
 				config->value("config/gameplay/font_tc_size", tc_size, 16);
 				std::string resolved_path = get_system_path(tc_file);
 				if (tc_file.find('<') == std::string::npos && !U7exists(resolved_path)) {

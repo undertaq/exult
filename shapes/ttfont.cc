@@ -746,8 +746,8 @@ int TtFont::paint_text_fixedwidth(
 		int        glyph_x     = x + centering + ft_face->glyph->bitmap_left;
 		int        glyph_y     = y - ft_face->glyph->bitmap_top;
 
-		// Draw foreground.
-		unsigned char fg_pixel = trans ? trans[255] : 255;
+		// Draw foreground (color set via TtFont::set_color).
+		unsigned char fg_pixel = trans ? trans[fg_color] : fg_color;
 		blit_glyph_bitmap(win, bitmap, glyph_x, glyph_y, fg_pixel);
 
 		x += width;

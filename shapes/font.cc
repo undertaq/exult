@@ -74,7 +74,15 @@ static std::string font_bytes_to_utf8(const char* text, int textlen = -1) {
 	char buf[FONT_MAP_MAX_UTF8_BYTES + 1];
 	for (int i = 0; i < len; ++i) {
 		const unsigned char c = static_cast<unsigned char>(text[i]);
-		const size_t        n = translate_font_hex_to_utf8(c, buf);
+		// Raw UTF-8 3-byte CJK sequence (0xE0-0xEF + 2 continuation bytes).
+		if (c >= 0xE0 && i + 2 < len &&
+			(static_cast<unsigned char>(text[i + 1]) & 0xC0) == 0x80 &&
+			(static_cast<unsigned char>(text[i + 2]) & 0xC0) == 0x80) {
+			result.append(text + i, 3);  // Pass through as-is.
+			i += 2;
+			continue;
+		}
+		const size_t n = translate_font_hex_to_utf8(c, buf);
 		result.append(buf, n);
 	}
 	return result;
@@ -796,6 +804,68 @@ int Font::find_xcursor(
 	return -1;
 }
 
+/*
+ *  Get the default pixel value used in this font for text rendering.
+ *  Scans the RLE-encoded glyph for character 'X' and returns the first
+ *  non-255 pixel value (255 is transparent in Exult's RLE encoding).
+ *  Returns 255 if the font has no glyph data.
+ */
+unsigned char Font::get_text_pixel() const {
+	if (!font_shapes) {
+		return 255;
+	}
+	// Use 'X' as reference; most fonts have it.
+	const int ref_char = 'X';
+	if (ref_char >= font_shapes->get_num_frames()) {
+		return 255;
+	}
+	Shape_frame* shape = font_shapes->get_frame(ref_char);
+	if (!shape || !shape->is_rle()) {
+		return 255;
+	}
+	unsigned char* data = shape->get_data();
+	if (!data) {
+		return 255;
+	}
+	const unsigned char* in = data;
+	int                  scanlen;
+	while ((scanlen = little_endian::Read2(in)) != 0) {
+		const int encoded = scanlen & 1;
+		scanlen >>= 1;
+		in += 4;    // Skip x, y offsets.
+		if (encoded) {
+			int remaining = scanlen;
+			while (remaining > 0) {
+				unsigned char bcnt = *in++;
+				const int     repeat = bcnt & 1;
+				bcnt >>= 1;
+				remaining -= bcnt;
+				if (repeat) {
+					const unsigned char pix = *in++;
+					if (pix != 255) {
+						return pix;
+					}
+				} else {
+					for (int i = 0; i < bcnt; i++) {
+						const unsigned char pix = *in++;
+						if (pix != 255) {
+							return pix;
+						}
+					}
+				}
+			}
+		} else {
+			for (int i = 0; i < scanlen; i++) {
+				const unsigned char pix = *in++;
+				if (pix != 255) {
+					return pix;
+				}
+			}
+		}
+	}
+	return 255;
+}
+
 Font::Font() = default;
 
 Font::Font(const File_spec& fname0, int index, int hlead, int vlead) {
@@ -1219,10 +1289,22 @@ void FontManager::reset() {
  */
 class TtFontWrapper : public Font {
 private:
-	TtFont ttfont;
+	TtFont               ttfont;
+	unsigned char        fg_color = 15;    // Default: palette white.
+	int                  sh_color = 0;     // Black outline.
 
 public:
 	TtFontWrapper() = default;
+
+	void set_text_color(unsigned char fg, int sh) override {
+		fg_color = fg;
+		sh_color = sh;
+		ttfont.set_color(fg, sh);
+	}
+
+	unsigned char get_text_pixel() const override {
+		return fg_color;
+	}
 
 	int load(const char* font_path, int pixel_size, int hlead = 0, int vlead = 1) {
 		return ttfont.load(font_path, pixel_size, hlead, vlead);
@@ -1231,13 +1313,13 @@ public:
 	int paint_text(
 			Image_buffer8* win, const char* text, int xoff, int yoff,
 			unsigned char* trans) override {
-		return ttfont.paint_text(win, text, xoff, yoff, 255, -1, trans);
+		return ttfont.paint_text(win, text, xoff, yoff, fg_color, sh_color, trans);
 	}
 
 	int paint_text(
 			Image_buffer8* win, const char* text, int textlen, int xoff, int yoff,
 			unsigned char* trans) override {
-		return ttfont.paint_text(win, text, textlen, xoff, yoff, 255, -1, trans);
+		return ttfont.paint_text(win, text, textlen, xoff, yoff, fg_color, sh_color, trans);
 	}
 
 	int paint_text_box(
@@ -1246,7 +1328,7 @@ public:
 			Cursor_info* cursor, unsigned char* trans) override {
 		return ttfont.paint_text_box(
 				win, text, x, y, w, h, vert_lead, pbreak, center,
-				cursor, 255, -1, trans);
+				cursor, fg_color, sh_color, trans);
 	}
 
 	int get_text_width(const char* text) override {
@@ -1282,12 +1364,14 @@ public:
 	int paint_text_fixedwidth(
 			Image_buffer8* win, const char* text, int xoff, int yoff,
 			int width, unsigned char* trans) override {
+		ttfont.set_color(fg_color, sh_color);
 		return ttfont.paint_text_fixedwidth(win, text, xoff, yoff, width, trans);
 	}
 
 	int paint_text_fixedwidth(
 			Image_buffer8* win, const char* text, int textlen, int xoff, int yoff,
 			int width, unsigned char* trans) override {
+		ttfont.set_color(fg_color, sh_color);
 		return ttfont.paint_text_fixedwidth(win, text, textlen, xoff, yoff, width, trans);
 	}
 
@@ -1295,6 +1379,7 @@ public:
 			Image_buffer8* win, const char* text, int x, int y, int w, int h,
 			int char_width, int vert_lead, int pbreak,
 			unsigned char* trans) override {
+		ttfont.set_color(fg_color, sh_color);
 		return ttfont.paint_text_box_fixedwidth(
 				win, text, x, y, w, h, char_width, vert_lead, pbreak, trans);
 	}
