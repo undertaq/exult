@@ -329,6 +329,12 @@ data/fonts_original.vga
 data/fonts_original_vga.h
 data/fonts_serif.vga
 data/fonts_serif_vga.h
+# Generated working files
+.omo/
+buildlog.txt
+tools/__pycache__/
+fluidsynth-2.5.1/
+
 .github
 .gradle/
 android/app/build/
