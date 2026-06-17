@@ -19,9 +19,12 @@
 #include "font_map.h"
 
 #include "databuf.h"
+#include "exult.h"
 #include "exult_flx.h"
 #include "fnames.h"
+#include "game.h"
 #include "msgfile.h"
+#include "usecode_text_translator.h"
 #include "utils.h"
 
 #include <charconv>
@@ -188,9 +191,13 @@ void translate_utf8_to_font_hex(std::string& text, bool use_special_chars) {
 			auto it = utf8_to_font_tc.find(std::string(text.data() + i, 3));
 			if (it != utf8_to_font_tc.end()) {
 				result += it->second;
-				i += 3;
-				continue;
+			} else {
+				// Not in font map: keep raw 3-byte UTF-8 sequence.
+				// TTF renderer (CJKRoutingFont) will detect and render it.
+				result.append(text.data() + i, 3);
 			}
+			i += 3;
+			continue;
 		}
 
 		// 2-byte UTF-8 sequence (0xC0-0xDF followed by 0x80-0xBF).
@@ -219,7 +226,15 @@ void set_font_map_use_special_chars(bool value) {
 }
 
 void translate_usecode_text(std::string& text) {
+	// Try runtime string replacement (English → Chinese etc.)
+	// Uses lazy initialization — dictionary loads on first call.
+	get_usecode_text_translator().translate(text);
+	// Then convert any remaining multi-byte UTF-8 to font hex codes.
 	translate_utf8_to_font_hex(text, font_map_use_special_chars);
+}
+
+void init_usecode_text_translator() {
+	get_usecode_text_translator().load("<PATCH>/usecode_translations.txt");
 }
 
 size_t translate_font_hex_to_utf8(unsigned char font_byte, char out[FONT_MAP_MAX_UTF8_BYTES + 1]) {

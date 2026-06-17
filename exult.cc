@@ -1075,6 +1075,9 @@ static void Init() {
 
 		Game::setup_text();
 
+		// Load usecode text translation dictionary (if available).
+		init_usecode_text_translator();
+
 		// Skip splash screen?
 		bool skip_splash;
 		config->value("config/gameplay/skip_splash", skip_splash);

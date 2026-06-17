@@ -52,4 +52,9 @@ size_t translate_font_hex_to_utf8(unsigned char font_byte, char out[FONT_MAP_MAX
 // and trigger the initial load of font_map.txt. Call once early at startup.
 void init_font_map();
 
+// Initialize the usecode text translator (loads dictionary from
+// <PATCH>/usecode_translations.txt). Called once at startup after config
+// and game paths are set up. Safe to call multiple times — only loads once.
+void init_usecode_text_translator();
+
 #endif
